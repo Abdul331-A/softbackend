@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Environment variables
+.env
+.env.local
+
+# Build artifacts
+dist/
+build/
+*.log
+npm-debug.log*
+
+# IDE/Editor config files (optional)
+.vscode/
+.idea/
+.DS_Store # macOS specific
+Thumbs.db # Windows specific

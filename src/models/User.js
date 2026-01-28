@@ -1,0 +1,63 @@
+import mongoose from "mongoose";
+
+const userSchema = new mongoose.Schema(
+    {
+        phoneNumber: {
+            type: String,
+            unique: true,
+            required: true,
+            index: true
+        },
+
+        username: {
+            type: String,
+            unique: true,
+            sparse: true,
+            trim: true
+        },
+
+        location: {
+            type: String,
+            trim: true
+        },
+
+        bio: {
+            type: String,
+            trim: true,
+            maxlength: 300
+        },
+
+        category: {
+            main: {
+                type: String,
+                trim: true
+            },
+            sub: {
+                type: String,
+                trim: true
+            }
+        },
+
+        profilePic: {
+            type: String,
+            default: ""
+        },
+
+        password: {
+            type: String
+        },
+
+        isOtpVerified: {
+            type: Boolean,
+            default: false
+        },
+
+        isPasswordCreated: {
+            type: Boolean,
+            default: false
+        }
+    },
+    { timestamps: true }
+);
+
+export default mongoose.model("User", userSchema);
