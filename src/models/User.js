@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
             required: true,
             index: true
         },
+        otp: { type: String }, // Add this field
 
         username: {
             type: String,
@@ -15,6 +16,7 @@ const userSchema = new mongoose.Schema(
             sparse: true,
             trim: true
         },
+
 
         location: {
             type: String,

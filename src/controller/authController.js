@@ -3,50 +3,93 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 
 export const requestOtp = async (req, res) => {
-    const { phoneNumber } = req.body;
+    try {
+        const { phoneNumber } = req.body;
 
-    if (!phoneNumber) {
-        return res.json({ success: false, message: "phoneNumber required" });
+        if (!phoneNumber) {
+            return res.status(400).json({ success: false, message: "Phone number is required" });
+        }
+
+        // Generate OTP (Static for now, but usually random)
+        const otp = "123456";
+
+        // Logic: Find the user, if not found, create a new one (Upsert)
+        // We save the OTP to the user record to verify it later
+        let user = await User.findOne({ phoneNumber });
+
+        if (!user) {
+            user = await User.create({
+                phoneNumber,
+                otp, // Save OTP to DB
+                isOtpVerified: false
+            });
+        } else {
+            // If user exists, update their OTP
+            user.otp = otp;
+            user.isOtpVerified = false; // Reset verification status
+            await user.save();
+        }
+
+        // Respond with success AND the userId (Client needs to store this for step 2)
+        res.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            userId: user._id, // <--- Key change: Send ID to client
+            otp // Remove this in production
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-
-    // Normally send SMS here
-    const otp = "123456";
-
-    res.json({
-        success: true,
-        message: "OTP sent",
-        otp, // only for testing
-        phoneNumber,
-    });
 };
 
-
 export const verifyOtp = async (req, res) => {
-    const { phoneNumber, otp } = req.body;
+    try {
 
-    if (otp !== "123456") {
-        return res.json({ success: false, message: "Invalid OTP" });
-    }
+        const { userId } = req.params;
+        // We remove phoneNumber and use userId instead
+        const { otp } = req.body;
 
-    let user = await User.findOne({ phoneNumber });
+        if (!otp) {
+            return res.status(400).json({ success: false, message: "OTP are required" });
+        }
 
-    if (!user) {
-        user = await User.create({
-            phoneNumber,
-            isOtpVerified: true
-        });
-    } else {
+        // Find user by ID (Since we don't have phone number in this request)
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Verify OTP matches the one saved in DB
+        // Note: In production, compare hashed OTPs
+        if (user.otp !== otp) {
+            return res.status(400).json({ success: false, message: "Invalid OTP" });
+        }
+
+        // Clean up and Verify
+        user.otp = null; // Clear OTP after usage to prevent reuse
         user.isOtpVerified = true;
         await user.save();
+
+        // Generate Token
+        const token = generateToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            message: "OTP verified successfully",
+            token,
+            user: {
+                _id: user._id,
+                phoneNumber: user.phoneNumber
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-
-    const token = generateToken(user._id);
-
-    res.json({
-        success: true,
-        token,
-        message: "OTP verified"
-    });
 };
 
 
@@ -64,6 +107,8 @@ export const createCredentials = async (req, res) => {
         }
 
         const user = await User.findById(userId);
+        console.log("user found:", user);
+
 
         if (!user) {
             return res.status(404).json({
@@ -96,6 +141,7 @@ export const createCredentials = async (req, res) => {
         user.username = username;
         user.password = hash;
         user.isPasswordCreated = true;
+        user.profilePic = ""; // Default empty
 
         if (req.file) {
             // This saves "uploads/1712345.jpg" to the DB
@@ -135,36 +181,6 @@ export const getProfile = async (req, res) => {
     });
 };
 
-
-// export const updateProfile = async (req, res) => {
-//     try {
-//         const userId = req.user?._id || req.params.id;
-//         const { username, location, bio, mainCategory, subCategory } = req.body;
-
-//         const updateData = {};
-//         if (username) updateData.username = username;
-//         if (location) updateData.location = location;
-//         if (bio) updateData.bio = bio;
-//         if (mainCategory) updateData["category.main"] = mainCategory;
-//         if (subCategory) updateData["category.sub"] = subCategory;
-
-//         // MULTER LOGIC HERE
-//         if (req.file) {
-//             updateData.profilePic = req.file.path; // Saves "uploads/filename.jpg"
-//         }
-
-//         const updatedUser = await User.findByIdAndUpdate(
-//             userId,
-//             { $set: updateData },
-//             { new: true, runValidators: true }
-//         ).select("-password");
-
-//         res.status(200).json({ success: true, userData: updatedUser });
-//     } catch (error) {
-//         // ... error handling
-//         res.status(500).json({ message: error.message })
-//     }
-// };
 
 
 export const updateProfile = async (req, res) => {

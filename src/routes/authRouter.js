@@ -7,7 +7,8 @@ import { upload } from "../middleware/uploadMiddleware.js";
 const userRouter = express.Router();
 
 userRouter.post("/request-otp", requestOtp);
-userRouter.post("/verify-otp", verifyOtp);
+
+userRouter.post("/verify-otp/:userId", verifyOtp);
 userRouter.post("/create-credentials", protect, upload.single("profilePic"), createCredentials);
 userRouter.get("/profile", protect, getProfile);
 
