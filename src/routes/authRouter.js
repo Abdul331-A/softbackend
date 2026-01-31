@@ -12,8 +12,6 @@ userRouter.post("/verify-otp/:userId", verifyOtp);
 userRouter.post("/create-credentials", protect, upload.single("profilePic"), createCredentials);
 userRouter.get("/profile", protect, getProfile);
 
-
-userRouter.put("/complete-profile", protect, updateProfile);
-
+userRouter.put("/complete-profile/:userId", protect, updateProfile);
 
 export default userRouter;

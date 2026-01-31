@@ -47,7 +47,8 @@ export const requestOtp = async (req, res) => {
 export const verifyOtp = async (req, res) => {
     try {
 
-        const { userId } = req.params;
+        const userId = req.params.userId; // Get userId from URL params
+
         // We remove phoneNumber and use userId instead
         const { otp } = req.body;
 
@@ -177,7 +178,12 @@ export const getProfile = async (req, res) => {
 
     res.json({
         success: true,
-        user
+        user: {
+            _id: user._id,
+            username: user.username,
+            profilePic: user.profilePic,
+            phoneNumber: user.phoneNumber,
+        }
     });
 };
 
@@ -185,7 +191,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.params.userId;
 
         const { location, bio, mainCategory, subCategory } = req.body;
 

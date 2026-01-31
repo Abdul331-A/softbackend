@@ -3,7 +3,15 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { connectDB } from './src/lib/db.js';
 import userRouter from './src/routes/authRouter.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+// import { isIPv4 } from 'net';
 
+
+
+// __dirname replacement in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load variables
 dotenv.config();
@@ -11,9 +19,10 @@ await connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '192.168.220.5';
 
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Middleware
 app.use(express.json()); // Allows parsing JSON body
@@ -34,20 +43,6 @@ app.get("/", (req, res) => {
 
 app.use('/api/auth', userRouter)
 
-// Start Server
-// const startServer = async () => {
-//     try {
-//         await connectDB();
-//         app.listen(PORT, () => {
-//             console.log(`Server running on http://localhost:${PORT}`);
-//         });
-//     } catch (error) {
-//         console.log("Database connection failed", error);
-//     }
-// };
-
-// startServer();
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
