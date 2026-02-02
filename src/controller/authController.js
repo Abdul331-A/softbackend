@@ -217,7 +217,7 @@ export const updateProfile = async (req, res) => {
             userId,
             { $set: updateData },
             { new: true, runValidators: true }
-        ).select("-password");
+        ).select("-password -followers -following -otp"); 
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -231,6 +231,7 @@ export const updateProfile = async (req, res) => {
             message: "Profile updated successfully",
             user: updatedUser,
         });
+
     } catch (error) {
         res.status(500).json({
             success: false,
