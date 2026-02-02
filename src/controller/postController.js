@@ -60,3 +60,15 @@ export const toggleLikePost = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
+export const getUserPost = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        
+
+
+    } catch (error) {
+
+    }
+}

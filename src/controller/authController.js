@@ -117,12 +117,12 @@ export const createCredentials = async (req, res) => {
         }
 
         // 2. Prevent overwriting
-        if (user.isPasswordCreated) {
-            return res.status(400).json({
-                success: false,
-                message: "Credentials already created",
-            });
-        }
+        // if (user.isPasswordCreated) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Credentials already created",
+        //     });
+        // }
 
         // 3. Check username uniqueness
         const exists = await User.findOne({ username });
@@ -140,15 +140,15 @@ export const createCredentials = async (req, res) => {
         user.username = username;
         user.password = hash;
         user.isPasswordCreated = true;
-        
+
         // --- CLOUDINARY LOGIC START ---
         // Default to empty string if no file uploaded
-        user.profilePic = ""; 
+        user.profilePic = "";
 
         // If Multer (Cloudinary) successfully uploaded a file, it adds 'path' to req.file
         if (req.file) {
             // req.file.path contains the full Cloudinary URL (e.g., https://res.cloudinary.com/...)
-            user.profilePic = req.file.path; 
+            user.profilePic = req.file.path;
         }
         // --- CLOUDINARY LOGIC END ---
 
@@ -206,6 +206,11 @@ export const updateProfile = async (req, res) => {
             updateData.category = {};
             if (mainCategory) updateData.category.main = mainCategory;
             if (subCategory) updateData.category.sub = subCategory;
+        }
+
+        if (req.file) {
+            // req.file.path is the secure Cloudinary URL
+            updateData.profilePic = req.file.path;
         }
 
         const updatedUser = await User.findByIdAndUpdate(
