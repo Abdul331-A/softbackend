@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Post } from "../models/Post";
 
 
@@ -61,14 +62,28 @@ export const toggleLikePost = async (req, res) => {
     }
 };
 
+
+
 export const getUserPost = async (req, res) => {
     try {
         const { userId } = req.params;
 
+        if(!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: "Invalid user ID" });
+        }
+
+        const post=await Post.find({user:userId}).populate("user","username profilePicture").sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: post });
         
-
-
     } catch (error) {
-
+        res.status(500).json({ success: false, message: "Server Error" });
     }
-}
+};
+
+export const getFeedPosts = async (req, res) => {
+    try {
+        const user=req.user.userId;
+    } catch (error) {
+        
+    }
+};

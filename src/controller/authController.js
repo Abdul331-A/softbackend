@@ -185,6 +185,9 @@ export const getProfile = async (req, res) => {
             username: user.username,
             profilePic: user.profilePic,
             phoneNumber: user.phoneNumber,
+            location: user.location,
+            bio: user.bio,
+            category: user.category
         }
     });
 };
@@ -194,6 +197,9 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const userId = req.params.userId;
+
+        console.log(userId);
+        
 
         const { location, bio, mainCategory, subCategory } = req.body;
 
@@ -214,10 +220,11 @@ export const updateProfile = async (req, res) => {
         }
 
         const updatedUser = await User.findByIdAndUpdate(
+            console.log(updateData),
             userId,
             { $set: updateData },
             { new: true, runValidators: true }
-        ).select("-password -followers -following -otp"); 
+        ).select("-password -followers -following -otp");
 
         if (!updatedUser) {
             return res.status(404).json({
