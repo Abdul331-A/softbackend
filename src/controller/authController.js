@@ -108,8 +108,6 @@ export const createCredentials = async (req, res) => {
         }
 
         const user = await User.findById(userId);
-        console.log("user found:", user);
-
 
         if (!user) {
             return res.status(404).json({
@@ -142,12 +140,17 @@ export const createCredentials = async (req, res) => {
         user.username = username;
         user.password = hash;
         user.isPasswordCreated = true;
-        user.profilePic = ""; // Default empty
+        
+        // --- CLOUDINARY LOGIC START ---
+        // Default to empty string if no file uploaded
+        user.profilePic = ""; 
 
+        // If Multer (Cloudinary) successfully uploaded a file, it adds 'path' to req.file
         if (req.file) {
-            // This saves "uploads/1712345.jpg" to the DB
-            user.profilePic = `uploads/${req.file.filename}`;
+            // req.file.path contains the full Cloudinary URL (e.g., https://res.cloudinary.com/...)
+            user.profilePic = req.file.path; 
         }
+        // --- CLOUDINARY LOGIC END ---
 
         await user.save();
 
@@ -169,7 +172,6 @@ export const createCredentials = async (req, res) => {
         });
     }
 };
-
 
 
 export const getProfile = async (req, res) => {

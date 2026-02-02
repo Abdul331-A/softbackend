@@ -1,28 +1,37 @@
 import multer from 'multer';
 import path from 'path';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from '../lib/cloudinary.js';
 
-// Storage Configuration
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // Check the fieldname used in the frontend/Postman
+const storage = new CloudinaryStorage({
+
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        let folderName = 'uploads/others';
+        let resourceType = 'image'; // Default to image
+
+        // Logic to determine folder based on fieldname
         if (file.fieldname === 'profilePic') {
-            // Save profile pictures here
-            cb(null, 'uploads/profiles/'); 
+            folderName = 'uploads/profiles';
         } else if (file.fieldname === 'postMedia') {
-            // Save post images/videos here
-            cb(null, 'uploads/posts/'); 
-        } else {
-            // Default folder for other uploads
-            cb(null, 'uploads/'); 
+            folderName = 'uploads/posts';
         }
+
+        // Logic to determine resource_type (Crucial for video uploads)
+        if (file.mimetype.startsWith('video/')) {
+            resourceType = 'video';
+        }
+
+        return {
+            folder: folderName,
+            resource_type: resourceType, // 'image', 'video', or 'auto'
+            public_id: `${file.fieldname}-${Date.now()}`, // Optional: Custom filename
+            // allowed_formats: ['jpg', 'png', 'mp4', 'mov'], // Optional: restrict formats here
+        };
     },
-    filename: (req, file, cb) => {
-        // unique filename: fieldname-timestamp.extension
-        cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-    }
 });
 
-// File Filter (To accept videos for posts but only images for profile)
+// 3. File Filter (Kept exactly the same as your original code)
 const fileFilter = (req, file, cb) => {
     if (file.fieldname === 'profilePic') {
         // Profile Pic: Allow ONLY images
@@ -43,9 +52,9 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Initialize Multer
-export const upload = multer({ 
-    storage: storage, 
+// 4. Initialize Multer
+export const upload = multer({
+    storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 50 * 1024 * 1024 } // Optional: Limit file size to 50MB
+    limits: { fileSize: 50 * 1024 * 1024 } // Limit to 50MB
 });
