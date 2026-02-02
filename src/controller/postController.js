@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Post } from "../models/Post";
+import { Post } from "../models/Post.js";
 
 
 
@@ -68,13 +68,13 @@ export const getUserPost = async (req, res) => {
     try {
         const { userId } = req.params;
 
-        if(!mongoose.Types.ObjectId.isValid(userId)) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ success: false, message: "Invalid user ID" });
         }
 
-        const post=await Post.find({user:userId}).populate("user","username profilePicture").sort({ createdAt: -1 });
+        const post = await Post.find({ user: userId }).populate("user", "username profilePicture").sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: post });
-        
+
     } catch (error) {
         res.status(500).json({ success: false, message: "Server Error" });
     }
@@ -82,9 +82,34 @@ export const getUserPost = async (req, res) => {
 
 export const getFeedPosts = async (req, res) => {
     try {
-        const user=req.user.userId;
-        
+        const user = req.user.userId;
+        const post = await Post.find({ user: { $ne: user } }).populate("user", "username profilePicture").sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: post });
+
     } catch (error) {
-        
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
+export const deletePost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Post not found" });
+        }
+
+        if (post.user.toString() !== req.user.userId) {
+            return res.status(403).json({ success: false, message: "Unauthorized" });
+        }
+
+        await Post.deleteOne({ _id: postId });
+        res.status(200).json({ success: true, message: "Post deleted successfully" });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+

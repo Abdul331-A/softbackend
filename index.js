@@ -5,6 +5,7 @@ import { connectDB } from './src/lib/db.js';
 import userRouter from './src/routes/authRouter.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import postRouter from './src/routes/postRouter.js';
 // import { isIPv4 } from 'net';
 
 
@@ -42,6 +43,7 @@ app.get("/", (req, res) => {
 });
 
 app.use('/api/auth', userRouter)
+app.use('/api/posts', postRouter)
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
