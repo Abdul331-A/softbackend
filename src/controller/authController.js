@@ -176,19 +176,12 @@ export const createCredentials = async (req, res) => {
 
 export const getProfile = async (req, res) => {
     const user = await User.findById(req.user.userId)
+    
         .select("-password");
 
     res.json({
         success: true,
-        user: {
-            _id: user._id,
-            username: user.username,
-            profilePic: user.profilePic,
-            phoneNumber: user.phoneNumber,
-            location: user.location,
-            bio: user.bio,
-            category: user.category
-        }
+        user
     });
 };
 
@@ -196,6 +189,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
+
         const userId = req.params.userId;
 
         console.log(userId);
@@ -220,7 +214,6 @@ export const updateProfile = async (req, res) => {
         }
 
         const updatedUser = await User.findByIdAndUpdate(
-            console.log(updateData),
             userId,
             { $set: updateData },
             { new: true, runValidators: true }

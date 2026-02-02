@@ -83,6 +83,7 @@ export const getUserPost = async (req, res) => {
 export const getFeedPosts = async (req, res) => {
     try {
         const user=req.user.userId;
+        
     } catch (error) {
         
     }
