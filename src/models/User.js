@@ -30,11 +30,11 @@ const userSchema = new mongoose.Schema(
         },
 
         category: {
-            main: {
+            mainCategory: {
                 type: String,
                 trim: true
             },
-            sub: {
+            subCategory: {
                 type: String,
                 trim: true
             }

@@ -26,14 +26,18 @@ export const createPost = async (req, res) => {
     }
 };
 
+
 export const getMyPosts = async (req, res) => {
     try {
         const posts = await Post.find({ user: req.user.userId }).populate("user", "username profilePicture").sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: posts });
     } catch (error) {
+
         res.status(500).json({ success: false, message: "Server Error" });
+
     }
 }
+
 
 export const toggleLikePost = async (req, res) => {
     try {
@@ -80,6 +84,7 @@ export const getUserPost = async (req, res) => {
     }
 };
 
+
 export const getFeedPosts = async (req, res) => {
     try {
         const user = req.user.userId;
@@ -90,6 +95,7 @@ export const getFeedPosts = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
 
 export const deletePost = async (req, res) => {
     try {

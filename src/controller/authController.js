@@ -204,8 +204,8 @@ export const updateProfile = async (req, res) => {
 
         if (mainCategory || subCategory) {
             updateData.category = {};
-            if (mainCategory) updateData.category.main = mainCategory;
-            if (subCategory) updateData.category.sub = subCategory;
+            if (mainCategory) updateData.category.mainCategory = mainCategory;
+            if (subCategory) updateData.category.subCategory = subCategory;
         }
 
         if (req.file) {

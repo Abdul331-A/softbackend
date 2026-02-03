@@ -17,10 +17,13 @@ postRouter.get('/my-posts', protect, getMyPosts);
 //get user posts
 postRouter.get('/user-posts/:userId', protect, getUserPost);
 
+//get feed posts
 postRouter.get('/feed', protect, getFeedPosts);
 
+//toggle like
 postRouter.post('/toggle-like/:postId', protect, toggleLikePost);
 
+//delete post
 postRouter.delete('/delete-post/:postId', protect, deletePost);
 
 export default postRouter;
