@@ -189,27 +189,79 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-
         const userId = req.params.userId;
 
-        console.log(userId);
-        
-
-        const { location, bio, mainCategory, subCategory } = req.body;
+        const {
+            location,
+            bio,
+            mainCategory,
+            subCategory,
+            username: newUsername
+        } = req.body;
 
         const updateData = {};
 
+        // ---------- Basic fields ----------
         if (location) updateData.location = location;
         if (bio) updateData.bio = bio;
 
+        // ---------- Category ----------
         if (mainCategory || subCategory) {
             updateData.category = {};
             if (mainCategory) updateData.category.mainCategory = mainCategory;
             if (subCategory) updateData.category.subCategory = subCategory;
         }
 
+        // ---------- Username update ----------
+        if (newUsername) {
+            const normalizedUsername = newUsername.toLowerCase().trim();
+
+            // OPTIONAL validation
+            // const usernameRegex = /^[a-z0-9_.]{3,20}$/;
+            // if (!usernameRegex.test(normalizedUsername)) {
+            //     return res.status(400).json({
+            //         success: false,
+            //         message:
+            //             "Username must be 3–20 characters and contain only letters, numbers, underscores, or dots",
+            //     });
+            // }
+
+            // fetch current user
+            const currentUser = await User.findById(userId).select("username");
+            if (!currentUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found",
+                });
+            }
+
+            // same username → skip update
+            if (currentUser.username === normalizedUsername) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Username unchanged",
+                    user: currentUser,
+                });
+            }
+
+            // check uniqueness
+            const usernameTaken = await User.findOne({
+                username: normalizedUsername,
+                _id: { $ne: userId },
+            });
+
+            if (usernameTaken) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Username already taken",
+                });
+            }
+
+            updateData.username = normalizedUsername;
+        }
+
+        // ---------- Profile pic ----------
         if (req.file) {
-            // req.file.path is the secure Cloudinary URL
             updateData.profilePic = req.file.path;
         }
 
@@ -218,13 +270,6 @@ export const updateProfile = async (req, res) => {
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-password -followers -following -otp");
-
-        if (!updatedUser) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
 
         res.status(200).json({
             success: true,
