@@ -85,6 +85,7 @@ export const getUserPost = async (req, res) => {
 };
 
 
+
 export const getFeedPosts = async (req, res) => {
     try {
         const user = req.user.userId;
@@ -100,6 +101,12 @@ export const getFeedPosts = async (req, res) => {
 export const deletePost = async (req, res) => {
     try {
         const { postId } = req.params;
+        console.log(postId);
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ success: false, message: "Invalid post ID" });
+        }
+        
 
         const post = await Post.findById(postId);
 
