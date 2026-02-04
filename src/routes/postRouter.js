@@ -15,7 +15,7 @@ postRouter.post('/create-post', protect, upload.single('media'), createPost);
 postRouter.get('/my-posts', protect, getMyPosts);
 
 //edit post
-postRouter.post('/edit-post/:postId', protect, editPost);
+postRouter.put('/edit-post/:postId', protect, editPost);
 
 //get user posts
 postRouter.get('/user-posts/:userId', protect, getUserPost);
