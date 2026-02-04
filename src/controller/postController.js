@@ -5,8 +5,9 @@ import { Post } from "../models/Post.js";
 
 export const createPost = async (req, res) => {
     try {
-        if (!req.file) {
-            res.status(400).json({ success: false, message: "Post media is required" });
+        if ((!req.file || !req.file.path) && !req.body.caption) {
+            return res.status(400).json({ success: false, message: "Either post media or caption is required" });
+            
         }
         const isVideo = req.file.mimetype.startsWith('video/');
         const type = isVideo ? "video" : "image";
@@ -48,8 +49,18 @@ export const getMyPosts = async (req, res) => {
 
 export const editPost = async (req, res) => {
     try {
+
+        console.log("✅ editPost called");
+        console.log("Params:", req.params);
+        console.log("Body:", req.body);
+        console.log("User:", req.user);
+
+
         const postId = req.params.postId;
         const { caption } = req.body;
+
+        console.log(postId, caption);
+
 
         if (!caption) {
             return res.status(400).json({ success: false, message: "caption is required" });
@@ -65,7 +76,9 @@ export const editPost = async (req, res) => {
         res.status(200).json({ success: true, data: post, message: "Post updated successfully" });
 
     } catch (error) {
+        console.log("EDIT POST ERROR:", error);
         res.status(500).json({ success: false, message: "Server Error" });
+
     }
 }
 

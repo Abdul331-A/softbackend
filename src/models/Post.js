@@ -5,17 +5,24 @@ const postSchema = new mongoose.Schema(
         user: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true
+            required: true,
+            index: true
         },
-        mediaUrl: {
-            type: String,
-            required: true
-        },
-        mediaType: {
-            type: String,
-            enum: ["image", "video"],
-            default: "image"
-        },
+        media: [
+            {
+                mediaUrl: {
+                    type: String,
+                },
+                mediaType: {
+                    type: String,
+                    enum: ["image", "video"],
+                    default: "image"
+                },
+                public_id: {
+                    type: String,
+                }
+            }
+        ],
         caption: {
             type: String,
             trim: true
@@ -35,4 +42,4 @@ const postSchema = new mongoose.Schema(
 
 )
 
-export const Post=mongoose.model("Post",postSchema);
+export const Post = mongoose.model("Post", postSchema);
