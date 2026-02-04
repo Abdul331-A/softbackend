@@ -22,7 +22,15 @@ export const createPost = async (req, res) => {
         res.status(201).json({ success: true, data: savedPost });
 
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server Error" });
+        // 4. CRITICAL: Cleanup file if DB save fails
+        if (req.file && req.file.path) {
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error("Failed to delete temp file:", err);
+            });
+        }
+
+        console.error("Post Creation Error:", error);
+        res.status(500).json({ success: false, message: "Failed to create post" });
     }
 };
 
@@ -35,6 +43,29 @@ export const getMyPosts = async (req, res) => {
 
         res.status(500).json({ success: false, message: "Server Error" });
 
+    }
+}
+
+export const editPost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { caption } = req.body;
+
+        if (!caption) {
+            return res.status(400).json({ success: false, message: "caption is required" });
+        }
+
+        const post = await Post.findById(postId);
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Post not found" });
+        }
+
+        post.caption = caption;
+        await post.save();
+        res.status(200).json({ success: true, data: post, message: "Post updated successfully" });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 }
 
@@ -106,7 +137,7 @@ export const deletePost = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(postId)) {
             return res.status(400).json({ success: false, message: "Invalid post ID" });
         }
-        
+
 
         const post = await Post.findById(postId);
 

@@ -1,6 +1,6 @@
 import express from 'express';
 import { upload } from '../middleware/uploadMiddleware.js';
-import { createPost, deletePost, getFeedPosts, getMyPosts, getUserPost, toggleLikePost } from '../controller/postController.js';
+import { createPost, deletePost, editPost, getFeedPosts, getMyPosts, getUserPost, toggleLikePost } from '../controller/postController.js';
 import protect from '../middleware/authMiddleware.js';
 
 
@@ -13,6 +13,9 @@ postRouter.post('/create-post', protect, upload.single('media'), createPost);
 
 //get my posts
 postRouter.get('/my-posts', protect, getMyPosts);
+
+//edit post
+postRouter.post('/edit-post/:postId', protect, editPost);
 
 //get user posts
 postRouter.get('/user-posts/:userId', protect, getUserPost);

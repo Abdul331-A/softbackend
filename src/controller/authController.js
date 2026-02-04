@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
+import fs from "fs";
 
 export const requestOtp = async (req, res) => {
     try {
@@ -148,6 +149,8 @@ export const createCredentials = async (req, res) => {
         // If Multer (Cloudinary) successfully uploaded a file, it adds 'path' to req.file
         if (req.file) {
             // req.file.path contains the full Cloudinary URL (e.g., https://res.cloudinary.com/...)
+           
+
             user.profilePic = req.file.path;
         }
         // --- CLOUDINARY LOGIC END ---
@@ -262,6 +265,7 @@ export const updateProfile = async (req, res) => {
 
         // ---------- Profile pic ----------
         if (req.file) {
+            //  const newFileHash=await getFilehash(req.file.path);
             updateData.profilePic = req.file.path;
         }
 
