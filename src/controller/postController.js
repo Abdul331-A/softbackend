@@ -48,7 +48,7 @@ export const getMyPosts = async (req, res) => {
 
 export const editPost = async (req, res) => {
     try {
-        const { postId } = req.params;
+        const postId = req.params.postId;
         const { caption } = req.body;
 
         if (!caption) {
