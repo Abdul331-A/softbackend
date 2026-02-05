@@ -6,6 +6,7 @@ import userRouter from './src/routes/authRouter.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import postRouter from './src/routes/postRouter.js';
+import multer from 'multer';
 // import { isIPv4 } from 'net';
 
 
@@ -44,6 +45,21 @@ app.get("/", (req, res) => {
 
 app.use('/api/auth', userRouter)
 app.use('/api/posts', postRouter)
+
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError || err.message) {
+        return res.status(400).json({
+            success: false,
+            message: err.message,
+        });
+    }
+
+    // fallback
+    res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+    });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

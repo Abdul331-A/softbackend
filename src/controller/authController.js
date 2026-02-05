@@ -126,7 +126,11 @@ export const createCredentials = async (req, res) => {
         // }
 
         // 3. Check username uniqueness
-        const exists = await User.findOne({ username });
+        const exists = await User.findOne({
+            username,
+            _id: { $ne: userId }
+        });
+
         if (exists) {
             return res.status(400).json({
                 success: false,
@@ -141,16 +145,11 @@ export const createCredentials = async (req, res) => {
         user.username = username;
         user.password = hash;
         user.isPasswordCreated = true;
+        // user.profilePic = ""; // Default to empty string
 
         // --- CLOUDINARY LOGIC START ---
         // Default to empty string if no file uploaded
-        user.profilePic = "";
-
-        // If Multer (Cloudinary) successfully uploaded a file, it adds 'path' to req.file
         if (req.file) {
-            // req.file.path contains the full Cloudinary URL (e.g., https://res.cloudinary.com/...)
-           
-
             user.profilePic = req.file.path;
         }
         // --- CLOUDINARY LOGIC END ---
@@ -179,7 +178,7 @@ export const createCredentials = async (req, res) => {
 
 export const getProfile = async (req, res) => {
     const user = await User.findById(req.user.userId)
-    
+
         .select("-password");
 
     res.json({
@@ -240,7 +239,7 @@ export const updateProfile = async (req, res) => {
 
             // same username → skip update
             if (currentUser.username === normalizedUsername) {
-                return res.status(200).json({
+                res.status(200).json({
                     success: true,
                     message: "Username unchanged",
                     user: currentUser,
@@ -265,7 +264,6 @@ export const updateProfile = async (req, res) => {
 
         // ---------- Profile pic ----------
         if (req.file) {
-            //  const newFileHash=await getFilehash(req.file.path);
             updateData.profilePic = req.file.path;
         }
 
