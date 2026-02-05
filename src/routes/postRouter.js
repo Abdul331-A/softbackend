@@ -9,7 +9,7 @@ const postRouter = express.Router();
 
 
 //create post 
-postRouter.post('/create-post', protect, upload.single('media'), createPost);
+postRouter.post('/create-post', protect, upload.array('media',20), createPost);
 
 //get my posts
 postRouter.get('/my-posts', protect, getMyPosts);

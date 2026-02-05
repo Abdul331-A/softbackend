@@ -5,17 +5,26 @@ import { Post } from "../models/Post.js";
 
 export const createPost = async (req, res) => {
     try {
-        if ((!req.file || !req.file.path) && !req.body.caption) {
+        if ((!req.file || !req.files || req.files.length === 0) && !req.body.caption) {
             return res.status(400).json({ success: false, message: "Either post media or caption is required" });
-            
+
         }
-        const isVideo = req.file.mimetype.startsWith('video/');
-        const type = isVideo ? "video" : "image";
+
+        let mediaArray = [];
+
+        if (req.files && req.files.length > 0) {
+            mediaArray = req.files.map((file) => {
+                const isVideo = file.mimetype.startsWith("video/");
+                return {
+                    mediaUrl: file.path,      // Cloudinary URL
+                    mediaType: isVideo ? "video" : "image"
+                };
+            });
+        }
 
         const newPost = new Post({
             user: req.user.userId,
-            mediaUrl: req.file.path,
-            mediaType: type,
+            media: mediaArray,
             caption: req.body.caption || ""
         });
         const savedPost = await newPost.save();
