@@ -13,7 +13,7 @@ export const requestOtp = async (req, res) => {
         }
 
         // Generate OTP (Static for now, but usually random)
-        const otp = generateOtp();
+        const otp = "123456";
 
         // Logic: Find the user, if not found, create a new one (Upsert)
         // We save the OTP to the user record to verify it later
