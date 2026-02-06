@@ -33,6 +33,11 @@ const storage = new CloudinaryStorage({
 
 // 3. File Filter (Kept exactly the same as your original code)
 const fileFilter = (req, file, cb) => {
+    // Android real device videos
+    if (file.mimetype === "application/octet-stream") {
+        return cb(null, true);
+    }
+
     if (file.fieldname === 'profilePic') {
         // Profile Pic: Allow ONLY images
         if (file.mimetype.startsWith('image/')) {
@@ -42,7 +47,10 @@ const fileFilter = (req, file, cb) => {
         }
     } else if (file.fieldname === 'postMedia') {
         // Post Media: Allow Images AND Videos
-        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+        if (
+            file.mimetype.startsWith('image/') ||
+            file.mimetype.startsWith('video/')
+        ) {
             cb(null, true);
         } else {
             cb(new Error('Post media must be an image or video!'), false);
@@ -51,6 +59,7 @@ const fileFilter = (req, file, cb) => {
         cb(null, true);
     }
 };
+
 
 // 4. Initialize Multer
 export const upload = multer({
