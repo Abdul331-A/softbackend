@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import fs from "fs";
+import { generateOtp } from "../utils/generateOtp.js";
 
 export const requestOtp = async (req, res) => {
     try {
@@ -12,7 +13,7 @@ export const requestOtp = async (req, res) => {
         }
 
         // Generate OTP (Static for now, but usually random)
-        const otp = "123456";
+        const otp = generateOtp();
 
         // Logic: Find the user, if not found, create a new one (Upsert)
         // We save the OTP to the user record to verify it later

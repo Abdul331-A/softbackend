@@ -21,11 +21,14 @@ export const createPost = async (req, res) => {
                 };
             });
         }
+        // const createdAtIST = new Date(savedPost.createdAt)
+        //     .toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
         const newPost = new Post({
             user: req.user.userId,
             media: mediaArray,
-            caption: req.body.caption || ""
+            caption: req.body.caption || "",
+            // createdAtIST: createdAtIST
         });
         const savedPost = await newPost.save();
 
