@@ -13,6 +13,10 @@ const postSchema = new mongoose.Schema(
                 mediaUrl: {
                     type: String,
                 },
+                thumbnailUrl: {
+                    type: String,
+                    default: null
+                },
                 mediaType: {
                     type: String,
                     enum: ["image", "video"],

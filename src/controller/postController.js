@@ -1,62 +1,91 @@
 import mongoose from "mongoose";
 import { Post } from "../models/Post.js";
-
+import cloudinary from "../lib/cloudinary.js";
+// import fs from "fs";
 
 
 export const createPost = async (req, res) => {
     try {
-        // 1. Check if media exists (specifically checking req.files array)
         const hasMedia = req.files && req.files.length > 0;
-
-        // 2. Check if caption exists
         const hasCaption = req.body.caption;
 
-        // 3. LOGIC CHANGE: Only return error if BOTH media and caption are missing
         if (!hasMedia && !hasCaption) {
             return res.status(400).json({
                 success: false,
-                message: "Either post media or caption is required"
+                message: "Either post media or caption is required",
             });
         }
 
         let mediaArray = [];
 
         if (hasMedia) {
-            mediaArray = req.files.map((file) => {
+            for (const file of req.files) {
                 const isVideo = file.mimetype.startsWith("video/");
-                return {
-                    mediaUrl: file.path,
-                    mediaType: isVideo ? "video" : "image"
-                };
-            });
+
+                // 1️⃣ Upload to Cloudinary
+                const uploadResult = await cloudinary.uploader.upload(
+                    file.path,
+                    {
+                        resource_type: isVideo ? "video" : "image",
+                        folder: "posts",
+                    }
+                );
+
+                let thumbnailUrl = null;
+
+                // 2️⃣ Create thumbnail ONLY for video
+                if (isVideo) {
+                    thumbnailUrl = cloudinary.url(uploadResult.public_id, {
+                        resource_type: "video",
+                        format: "jpg",
+                        transformation: [
+                            { width: 400, height: 300, crop: "fill" },
+                            { start_offset: "2" }, // 2nd second frame
+                        ],
+                    });
+                }
+
+                // 3️⃣ Push to media array (schema based)
+                mediaArray.push({
+                    mediaUrl: uploadResult.secure_url,
+                    thumbnailUrl: thumbnailUrl, // null for image
+                    mediaType: isVideo ? "video" : "image",
+                    public_id: uploadResult.public_id,
+                });
+
+                // 4️⃣ Delete local temp file
+                // fs.unlinkSync(file.path);
+            }
         }
 
-        const newPost = new Post({
+        // 5️⃣ Save post
+        const newPost = await Post.create({
             user: req.user.userId,
             media: mediaArray,
-            // 4. This line already handles the optional caption correctly
             caption: req.body.caption || "",
         });
 
-        console.log("caption ready", req.body.caption);
-        console.log("this media", mediaArray);
-
-        const savedPost = await newPost.save();
-
-        res.status(201).json({ success: true, data: savedPost });
+        res.status(201).json({
+            success: true,
+            data: newPost,
+        });
 
     } catch (error) {
-        // Cleanup loop for multiple files (req.files)
-        if (req.files && req.files.length > 0) {
-            req.files.forEach(file => {
-                fs.unlink(file.path, (err) => {
-                    if (err) console.error("Failed to delete temp file:", err);
-                });
-            });
-        }
-
         console.error("Post Creation Error:", error);
-        res.status(500).json({ success: false, message: "Failed to create post" });
+
+        // cleanup temp files
+        // if (req.files && req.files.length > 0) {
+        //     req.files.forEach((file) => {
+        //         if (fs.existsSync(file.path)) {
+        //             fs.unlinkSync(file.path);
+        //         }
+        //     });
+        // }
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to create post",
+        });
     }
 };
 
