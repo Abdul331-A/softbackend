@@ -5,40 +5,53 @@ import { Post } from "../models/Post.js";
 
 export const createPost = async (req, res) => {
     try {
-        if ((!req.file || !req.files || req.files.length === 0) && !req.body.caption) {
-            return res.status(400).json({ success: false, message: "Either post media or caption is required" });
+        // 1. Check if media exists (specifically checking req.files array)
+        const hasMedia = req.files && req.files.length > 0;
 
+        // 2. Check if caption exists
+        const hasCaption = req.body.caption;
+
+        // 3. LOGIC CHANGE: Only return error if BOTH media and caption are missing
+        if (!hasMedia && !hasCaption) {
+            return res.status(400).json({
+                success: false,
+                message: "Either post media or caption is required"
+            });
         }
 
         let mediaArray = [];
 
-        if (req.files && req.files.length > 0) {
+        if (hasMedia) {
             mediaArray = req.files.map((file) => {
                 const isVideo = file.mimetype.startsWith("video/");
                 return {
-                    mediaUrl: file.path,      // Cloudinary URL
+                    mediaUrl: file.path,
                     mediaType: isVideo ? "video" : "image"
                 };
             });
         }
-        // const createdAtIST = new Date(savedPost.createdAt)
-        //     .toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
         const newPost = new Post({
             user: req.user.userId,
             media: mediaArray,
+            // 4. This line already handles the optional caption correctly
             caption: req.body.caption || "",
-            // createdAtIST: createdAtIST
         });
+
+        console.log("caption ready", req.body.caption);
+        console.log("this media", mediaArray);
+
         const savedPost = await newPost.save();
 
         res.status(201).json({ success: true, data: savedPost });
 
     } catch (error) {
-        // 4. CRITICAL: Cleanup file if DB save fails
-        if (req.file && req.file.path) {
-            fs.unlink(req.file.path, (err) => {
-                if (err) console.error("Failed to delete temp file:", err);
+        // Cleanup loop for multiple files (req.files)
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(file => {
+                fs.unlink(file.path, (err) => {
+                    if (err) console.error("Failed to delete temp file:", err);
+                });
             });
         }
 
@@ -46,7 +59,6 @@ export const createPost = async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to create post" });
     }
 };
-
 
 export const getMyPosts = async (req, res) => {
     try {
