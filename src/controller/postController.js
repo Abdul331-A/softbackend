@@ -71,7 +71,7 @@ export const createPost = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            data: newPost,
+            newData: newPost,
 
         });
 
@@ -98,7 +98,7 @@ export const createPost = async (req, res) => {
 export const getMyPosts = async (req, res) => {
     try {
         const posts = await Post.find({ user: req.user.userId }).populate({path:"user", select:"username profilePic category",populate:{path:"category", select:"media caption createdAt"}}).sort({ createdAt: -1 });
-        res.status(200).json({ success: true, data: posts });
+        res.status(200).json({ success: true, getData: posts });
 
     } catch (error) {
 
@@ -133,7 +133,7 @@ export const editPost = async (req, res) => {
 
         post.caption = caption;
         await post.save();
-        res.status(200).json({ success: true, data: post, message: "Post updated successfully" });
+        res.status(200).json({ success: true, UpdateData: post, message: "Post updated successfully" });
 
     } catch (error) {
         console.log("EDIT POST ERROR:", error);
@@ -169,7 +169,6 @@ export const toggleLikePost = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
-
 
 
 export const getUserPost = async (req, res) => {
@@ -223,7 +222,7 @@ export const deletePost = async (req, res) => {
         }
 
         await Post.deleteOne({ _id: postId });
-        res.status(200).json({ success: true, data: post, message: "Post deleted successfully" });
+        res.status(200).json({ success: true, deleteData: post, message: "Post deleted successfully" });
 
     } catch (error) {
         res.status(500).json({ success: false, message: "Server Error" });
