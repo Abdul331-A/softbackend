@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Post } from "../models/Post.js";
 import cloudinary from "../lib/cloudinary.js";
+import User from "../models/User.js";
 // import fs from "fs";
 
 
@@ -65,9 +66,13 @@ export const createPost = async (req, res) => {
             caption: req.body.caption || "",
         });
 
+        // User.category.push(newPost._id);
+        // await User.save();
+
         res.status(201).json({
             success: true,
             data: newPost,
+
         });
 
     } catch (error) {
@@ -89,10 +94,12 @@ export const createPost = async (req, res) => {
     }
 };
 
+
 export const getMyPosts = async (req, res) => {
     try {
-        const posts = await Post.find({ user: req.user.userId }).populate("user", "username profilePicture").sort({ createdAt: -1 });
+        const posts = await Post.find({ user: req.user.userId }).populate({path:"user", select:"username profilePic category",populate:{path:"category", select:"media caption createdAt"}}).sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: posts });
+
     } catch (error) {
 
         res.status(500).json({ success: false, message: "Server Error" });
@@ -186,7 +193,7 @@ export const getUserPost = async (req, res) => {
 export const getFeedPosts = async (req, res) => {
     try {
         const user = req.user.userId;
-        const post = await Post.find({ user: { $ne: user } }).populate("user", "username profilePicture").sort({ createdAt: -1 });
+        const post = await Post.find({ user: { $ne: user } }).populate({path:"user", select:"username profilePic category",populate:{path:"category", select:"media caption createdAt"}}).sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: post });
 
     } catch (error) {
@@ -216,7 +223,7 @@ export const deletePost = async (req, res) => {
         }
 
         await Post.deleteOne({ _id: postId });
-        res.status(200).json({ success: true, message: "Post deleted successfully" });
+        res.status(200).json({ success: true, data: post, message: "Post deleted successfully" });
 
     } catch (error) {
         res.status(500).json({ success: false, message: "Server Error" });
