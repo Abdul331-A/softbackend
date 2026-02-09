@@ -9,7 +9,7 @@ export const createPost = async (req, res) => {
     try {
         const hasMedia = req.files && req.files.length > 0;
         const hasCaption = req.body.caption;
-        const {location} = req.body;
+        const { location } = req.body;
 
         if (!hasMedia && !hasCaption) {
             return res.status(400).json({
@@ -81,15 +81,6 @@ export const createPost = async (req, res) => {
     } catch (error) {
         console.error("Post Creation Error:", error);
 
-        // cleanup temp files
-        // if (req.files && req.files.length > 0) {
-        //     req.files.forEach((file) => {
-        //         if (fs.existsSync(file.path)) {
-        //             fs.unlinkSync(file.path);
-        //         }
-        //     });
-        // }
-
         res.status(500).json({
             success: false,
             message: "Failed to create post",
@@ -100,7 +91,7 @@ export const createPost = async (req, res) => {
 
 export const getMyPosts = async (req, res) => {
     try {
-        const posts = await Post.find({ user: req.user.userId }).populate({path:"user", select:"username profilePic category",populate:{path:"category", select:"media caption createdAt"}}).sort({ createdAt: -1 });
+        const posts = await Post.find({ user: req.user.userId }).populate({ path: "user", select: "username profilePic category", populate: { path: "category", select: "media caption createdAt" } }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, getData: posts });
 
     } catch (error) {
@@ -112,33 +103,57 @@ export const getMyPosts = async (req, res) => {
 
 export const editPost = async (req, res) => {
     try {
-
-        const postId = req.params.postId;
-        const { caption ,location} = req.body;
-
-        console.log(postId, caption);
-
-
-        // if (!caption) {
-        //     return res.status(400).json({ success: false, message: "caption is required" });
-        // }
+        const { postId } = req.params;
+        let { caption, location, deleteMediaIndexes } = req.body;
 
         const post = await Post.findById(postId);
         if (!post) {
             return res.status(404).json({ success: false, message: "Post not found" });
         }
 
-        post.caption = caption || null;
-        post.location = location || null;
+        // 🔐 Owner check
+        if (post.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "Unauthorized" });
+        }
+
+        // 🗑 DELETE MEDIA
+        if (typeof deleteMediaIndexes === "string") {
+            deleteMediaIndexes = JSON.parse(deleteMediaIndexes);
+        }
+
+        if (Array.isArray(deleteMediaIndexes) && deleteMediaIndexes.length > 0) {
+            post.media = post.media.filter(
+                (_, index) => !deleteMediaIndexes.includes(index)
+            );
+        }
+
+        // ➕ ADD NEW MEDIA
+        if (req.files && req.files.length > 0) {
+            const newMedia = req.files.map(file => ({
+                url: file.path,
+                type: file.mimetype.startsWith("video/") ? "video" : "image"
+            }));
+            post.media.push(...newMedia);
+        }
+
+        // ✏️ UPDATE TEXT FIELDS
+        if (caption !== undefined) post.caption = caption;
+        if (location !== undefined) post.location = location;
+
         await post.save();
-        res.status(200).json({ success: true, UpdateData: post, message: "Post updated successfully" });
+
+        res.status(200).json({
+            success: true,
+            message: "Post updated successfully",
+            post
+        });
 
     } catch (error) {
         console.log("EDIT POST ERROR:", error);
         res.status(500).json({ success: false, message: "Server Error" });
-
     }
-}
+};
+
 
 
 export const toggleLikePost = async (req, res) => {
@@ -190,7 +205,7 @@ export const getUserPost = async (req, res) => {
 export const getFeedPosts = async (req, res) => {
     try {
         const user = req.user.userId;
-        const post = await Post.find({ user: { $ne: user } }).populate({path:"user", select:"username profilePic category",populate:{path:"category", select:"media caption createdAt"}}).sort({ createdAt: -1 });
+        const post = await Post.find({ user: { $ne: user } }).populate({ path: "user", select: "username profilePic category", populate: { path: "category", select: "media caption createdAt" } }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, data: post });
 
     } catch (error) {

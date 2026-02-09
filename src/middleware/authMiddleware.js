@@ -1,33 +1,30 @@
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-const protect = (req, res, next) => {
-  let token;
-
-  // 1️⃣ Check header format
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer ")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
-  }
-
-  // 2️⃣ Token missing
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
-  }
-
+export const protect = async (req, res, next) => {
   try {
-    // 3️⃣ Verify token
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 4️⃣ Attach user
-    req.user = { userId: decoded.id };
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // 🔥 VERY IMPORTANT
+    req.user = user;
 
     next();
   } catch (error) {
-    return res.status(401).json({
-      message: "Invalid or expired token",
-    });
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
 

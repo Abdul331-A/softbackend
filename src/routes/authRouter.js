@@ -9,11 +9,9 @@ const userRouter = express.Router();
 
 userRouter.post("/request-otp", requestOtp);
 
-
 userRouter.post("/verify-otp/:userId", verifyOtp);
 
 userRouter.post("/create-credentials", protect, upload.fields([{ name: "profilePic", maxCount: 1 }]), createCredentials);
-
 
 userRouter.post('/login', login);
 
