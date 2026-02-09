@@ -63,7 +63,7 @@ export const createPost = async (req, res) => {
 
         // 5️⃣ Save post
         const newPost = await Post.create({
-            user: req.user.userId,
+            user: req.user._id,
             media: mediaArray,
             caption: req.body.caption || "",
             location: location || ""
