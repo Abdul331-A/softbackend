@@ -27,6 +27,10 @@ const postSchema = new mongoose.Schema(
                 }
             }
         ],
+        location: {
+            type: String,
+            trim: true
+        },
         caption: {
             type: String,
             trim: true

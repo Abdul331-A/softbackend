@@ -289,4 +289,175 @@ export const updateProfile = async (req, res) => {
     }
 };
 
+// ------------------ Forgot Password Flow ------------------
+// 1. Send Reset OTP
+export const sendResetOtp = async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
 
+        const user = await User.findOne({ phoneNumber });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const newResetOtp = "654321";
+        // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const hashedOtp = crypto
+            .createHash("sha256")
+            .update(newResetOtp)
+            .digest("hex");
+
+        user.resetOtp = hashedOtp;
+        user.resetOtpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+
+        res.status(200).json({
+            success: true,
+            message: "Reset OTP sent successfully",
+            resetOtp: newResetOtp // Remove this in production
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: error.message
+        });
+
+    }
+};
+
+// 2. Verify Reset OTP
+export const verifyForgotOtp = async (req, res) => {
+    try {
+        const { phoneNumber, otp } = req.body;
+
+        const hashedOtp = crypto
+            .createHash("sha256")
+            .update(otp)
+            .digest("hex");
+
+        const user = await User.findOne({
+            phoneNumber,
+            resetOtp: hashedOtp, //this line skip after the debugin 
+            resetOtpExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP"
+            });
+        }
+
+        user.otpVerified = true;
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "OTP verified successfully"
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error verifying OTP",
+            error: error.message
+        });
+    }
+};
+
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { phoneNumber, newPassword, confirmPassword } = req.body;
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Passwords do not match"
+            });
+        }
+        const user = await User.findOne({ phoneNumber, otpVerified: true });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        user.resetOtp = undefined;
+        user.resetOtpExpire = undefined;
+        user.otpVerified = false;
+        await user.save();
+        res.status(200).json({
+            success: true,
+            message: "Password reset successfully"
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error resetting password",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+export const login = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // 1️⃣ Check user
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials"
+            });
+        }
+
+        // 2️⃣ Check password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials"
+            });
+        }
+
+        // 3️⃣ Generate JWT
+        const token = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        // 4️⃣ Response
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            token,
+            user
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
+
+export const logout = async (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "Logout successful."
+    });
+};

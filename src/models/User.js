@@ -16,13 +16,10 @@ const userSchema = new mongoose.Schema(
             sparse: true,
             trim: true
         },
-
-
         location: {
             type: String,
             trim: true
         },
-
         bio: {
             type: String,
             trim: true,
@@ -58,6 +55,15 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        
+        // 🔐 Forgot password fields
+        resetOtp: String,
+        resetOtpExpire: Date,
+        otpVerified: {
+            type: Boolean,
+            default: false
+        },
+
         followers: [
             {
                 type: mongoose.Schema.Types.ObjectId,

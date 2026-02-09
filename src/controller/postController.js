@@ -9,6 +9,7 @@ export const createPost = async (req, res) => {
     try {
         const hasMedia = req.files && req.files.length > 0;
         const hasCaption = req.body.caption;
+        const {location} = req.body;
 
         if (!hasMedia && !hasCaption) {
             return res.status(400).json({
@@ -52,6 +53,7 @@ export const createPost = async (req, res) => {
                     thumbnailUrl: thumbnailUrl, // null for image
                     mediaType: isVideo ? "video" : "image",
                     public_id: uploadResult.public_id,
+                    location: location || null
                 });
 
                 // 4️⃣ Delete local temp file
@@ -64,6 +66,7 @@ export const createPost = async (req, res) => {
             user: req.user.userId,
             media: mediaArray,
             caption: req.body.caption || "",
+            location: location || ""
         });
 
         // User.category.push(newPost._id);
@@ -110,28 +113,23 @@ export const getMyPosts = async (req, res) => {
 export const editPost = async (req, res) => {
     try {
 
-        console.log("✅ editPost called");
-        console.log("Params:", req.params);
-        console.log("Body:", req.body);
-        console.log("User:", req.user);
-
-
         const postId = req.params.postId;
-        const { caption } = req.body;
+        const { caption ,location} = req.body;
 
         console.log(postId, caption);
 
 
-        if (!caption) {
-            return res.status(400).json({ success: false, message: "caption is required" });
-        }
+        // if (!caption) {
+        //     return res.status(400).json({ success: false, message: "caption is required" });
+        // }
 
         const post = await Post.findById(postId);
         if (!post) {
             return res.status(404).json({ success: false, message: "Post not found" });
         }
 
-        post.caption = caption;
+        post.caption = caption || null;
+        post.location = location || null;
         await post.save();
         res.status(200).json({ success: true, UpdateData: post, message: "Post updated successfully" });
 
