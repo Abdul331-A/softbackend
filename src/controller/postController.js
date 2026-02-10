@@ -91,7 +91,7 @@ export const createPost = async (req, res) => {
 
 export const getMyPosts = async (req, res) => {
     try {
-        const posts = await Post.find({ user: req.user.userId }).populate({ path: "user", select: "username profilePic category", populate: { path: "category", select: "media caption createdAt" } }).sort({ createdAt: -1 });
+        const posts = await Post.find({ user: req.user._id }).populate({ path: "user", select: "username profilePic category", populate: { path: "category", select: "media caption createdAt" } }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, getData: posts });
 
     } catch (error) {

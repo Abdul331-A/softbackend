@@ -2,7 +2,8 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import fs from "fs";
-import { generateOtp } from "../utils/generateOtp.js";
+// import { generateOtp } from "../utils/generateOtp.js";
+import crypto from 'crypto'
 
 export const requestOtp = async (req, res) => {
     try {
@@ -178,10 +179,8 @@ export const createCredentials = async (req, res) => {
 
 
 export const getProfile = async (req, res) => {
-    const user = await User.findById(req.user.userId)
-
+    const user = await User.findById(req.user._id)
         .select("-password");
-
     res.json({
         success: true,
         user
@@ -388,6 +387,7 @@ export const resetPassword = async (req, res) => {
                 message: "User not found"
             });
         }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         user.resetOtp = undefined;
@@ -406,7 +406,6 @@ export const resetPassword = async (req, res) => {
         });
     }
 };
-
 
 
 
