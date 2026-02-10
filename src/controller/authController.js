@@ -96,7 +96,67 @@ export const verifyOtp = async (req, res) => {
     }
 };
 
+//resend otp controller
+export const resendOtp = async (req, res) => {
+    try {
+      const { userId } = req.params;
+  
+      const user = await User.findById(userId);
+  
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+  
+      // Already verified → no resend
+      if (user.isOtpVerified) {
+        return res.status(400).json({
+          success: false,
+          message: "OTP already verified"
+        });
+      }
+  
+      // Rate limit (60 sec)
+      if (
+        user.otpExpiresAt &&
+        user.otpExpiresAt > Date.now() - 60 * 1000
+      ) {
+        return res.status(429).json({
+          success: false,
+          message: "Please wait before requesting another OTP"
+        });
+      }
+  
+      // Generate OTP
+      const otp = "234567"; // static for testing
+  
+      // ✅ SAVE OTP PROPERLY
+      user.otp = otp;
+      user.otpExpiresAt = Date.now() + 5 * 60 * 1000;
+      user.isOtpVerified = false;
+  
+      await user.save();
+  
+      console.log("Resent OTP:", otp);
+  
+      res.status(200).json({
+        success: true,
+        message: "OTP resent successfully",
+        otp // remove in production
+      });
+  
+    } catch (error) {
+      console.error("RESEND OTP ERROR:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
+    }
+  };
 
+  
 export const createCredentials = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -288,126 +348,121 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-// ------------------ Forgot Password Flow ------------------
-// 1. Send Reset OTP
+// Forgot Password Flow 
+// 1. Send OTP
 export const sendResetOtp = async (req, res) => {
     try {
         const { phoneNumber } = req.body;
-
         const user = await User.findOne({ phoneNumber });
+
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
+            return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        const newResetOtp = "654321";
-        // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate OTP (Random for production)
+        const newResetOtp="654321";
+        // const newResetOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const hashedOtp = crypto
-            .createHash("sha256")
-            .update(newResetOtp)
-            .digest("hex");
+        // Hash OTP before saving
+        const hashedOtp = crypto.createHash("sha256").update(newResetOtp).digest("hex");
 
         user.resetOtp = hashedOtp;
         user.resetOtpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
         await user.save();
 
+        // TODO: Send OTP via SMS API here (Twilio, Fast2SMS etc.)
+        console.log(`OTP for ${phoneNumber}: ${newResetOtp}`); // For testing only
 
         res.status(200).json({
             success: true,
             message: "Reset OTP sent successfully",
-            resetOtp: newResetOtp // Remove this in production
+            resetOtp: newResetOtp  // <-- Don't send this in production response!
         });
 
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Server error",
-            error: error.message
-        });
-
+        res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
 };
 
-// 2. Verify Reset OTP
+// 2. Verify OTP & Generate Token
 export const verifyForgotOtp = async (req, res) => {
     try {
         const { phoneNumber, otp } = req.body;
 
-        const hashedOtp = crypto
-            .createHash("sha256")
-            .update(otp)
-            .digest("hex");
+        const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
         const user = await User.findOne({
             phoneNumber,
-            resetOtp: hashedOtp, //this line skip after the debugin 
+            resetOtp: hashedOtp,
             resetOtpExpire: { $gt: Date.now() }
         });
 
         if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid or expired OTP"
-            });
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
         }
 
+        // Generate Random Token
+        const resetToken = crypto.randomBytes(20).toString('hex');
+
+        // Hash Token
+        user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+        // Clear OTP fields
+        user.resetOtp = undefined;
+        user.resetOtpExpire = undefined;
         user.otpVerified = true;
+
         await user.save();
 
         res.json({
             success: true,
-            message: "OTP verified successfully"
+            message: "OTP verified successfully",
+            token: resetToken // Important: Frontend needs this for the next step
         });
+
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error verifying OTP",
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: "Error verifying OTP", error: error.message });
     }
 };
 
-
+// 3. Reset Password
 export const resetPassword = async (req, res) => {
     try {
-        const { phoneNumber, newPassword, confirmPassword } = req.body;
+        const { token, newPassword, confirmPassword } = req.body;
+
         if (newPassword !== confirmPassword) {
-            return res.status(400).json({
-                success: false,
-                message: "Passwords do not match"
-            });
-        }
-        const user = await User.findOne({ phoneNumber, otpVerified: true });
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+            return res.status(400).json({ success: false, message: "Passwords do not match" });
         }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        user.password = hashedPassword;
-        user.resetOtp = undefined;
-        user.resetOtpExpire = undefined;
+        // Hash the token received from frontend
+        const resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
+
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: "Invalid or expired token" });
+        }
+
+        // Update Password
+        user.password = await bcrypt.hash(newPassword, 10);
+
+        // Clear Token fields
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
         user.otpVerified = false;
+
         await user.save();
-        res.status(200).json({
-            success: true,
-            message: "Password reset successfully"
-        });
+
+        res.status(200).json({ success: true, message: "Password reset successfully" });
+
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error resetting password",
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: "Error resetting password", error: error.message });
     }
 };
-
-
 
 export const login = async (req, res) => {
     try {

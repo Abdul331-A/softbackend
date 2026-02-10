@@ -1,5 +1,5 @@
 import express from "express";
-import { createCredentials, getProfile, login, logout, requestOtp, resetPassword, sendResetOtp, updateProfile, verifyForgotOtp, verifyOtp } from "../controller/authController.js";
+import { createCredentials, getProfile, login, logout, requestOtp, resendOtp, resetPassword, sendResetOtp, updateProfile, verifyForgotOtp, verifyOtp } from "../controller/authController.js";
 import protect from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
@@ -10,6 +10,8 @@ const userRouter = express.Router();
 userRouter.post("/request-otp", requestOtp);
 
 userRouter.post("/verify-otp/:userId", verifyOtp);
+
+userRouter.post("/resend-verify-otp/:userId", resendOtp);
 
 userRouter.post("/create-credentials", protect, upload.fields([{ name: "profilePic", maxCount: 1 }]), createCredentials);
 

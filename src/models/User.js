@@ -55,10 +55,14 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        
+
         // 🔐 Forgot password fields
         resetOtp: String,
+
+        resetPasswordToken: String,
+
         resetOtpExpire: Date,
+        
         otpVerified: {
             type: Boolean,
             default: false
