@@ -447,6 +447,8 @@ export const resendForgotOtp = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "OTP already verified. Please reset your password."
+                
+                
             });
         }
 
@@ -479,7 +481,8 @@ export const resendForgotOtp = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "OTP resent successfully",
-            // newResetOtp // Remove in production
+            newResetOtp, // Remove in production
+            userId: user._id
         });
 
     } catch (error) {
@@ -526,7 +529,7 @@ export const resetPassword = async (req, res) => {
 
         await user.save();
 
-        res.status(200).json({ success: true, message: "Password reset successfully" });
+        res.status(200).json({ success: true, message: "Password reset successfully" ,userId: user._id});
 
     } catch (error) {
         res.status(500).json({ success: false, message: "Error resetting password", error: error.message });
@@ -558,7 +561,6 @@ export const login = async (req, res) => {
         // 3️⃣ Generate JWT
         const token = generateToken(user._id);
 
-        // 4️⃣ Response
         res.status(200).json({
             success: true,
             message: "Login successful",
