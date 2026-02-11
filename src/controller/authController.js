@@ -377,6 +377,7 @@ export const sendResetOtp = async (req, res) => {
             success: true,
             message: "Reset OTP sent successfully",
             // resetOtp: newResetOtp // Remove in production
+            userId: user._id // Send UserID to frontend
         });
 
     } catch (error) {
@@ -404,8 +405,6 @@ export const verifyForgotOtp = async (req, res) => {
             });
         }
 
-        // --- Changes Start ---
-
         // Mark user as verified
         user.otpVerified = true;
 
@@ -418,7 +417,7 @@ export const verifyForgotOtp = async (req, res) => {
         res.json({
             success: true,
             message: "OTP verified successfully",
-            userId: user._id, // Send UserID to frontend
+            userId: user._id, // Frontend needs this for Password Reset
         });
 
     } catch (error) {
@@ -427,6 +426,64 @@ export const verifyForgotOtp = async (req, res) => {
             message: "Error verifying OTP",
             error: error.message
         });
+    }
+};
+
+export const resendForgotOtp = async (req, res) => {
+    try {
+        const { userId } = req.params; // Make sure route is '/resend-otp/:userId'
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Fix 1: Check correct field name (otpVerified)
+        if (user.otpVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP already verified. Please reset your password."
+            });
+        }
+
+        // Fix 2: Better Rate Limiting Logic
+       
+        const isCooldownActive = user.resetOtpExpire && (user.resetOtpExpire.getTime() > Date.now() + 9 * 60 * 1000);
+
+        if (isCooldownActive) {
+            return res.status(429).json({
+                success: false,
+                message: "Please wait 1 minute before requesting another OTP"
+            });
+        }
+
+        // Generate new OTP (Use Random in Production)
+        // const newResetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        const newResetOtp = "654320";
+
+        // Hash OTP
+        const hashedOtp = crypto.createHash("sha256").update(newResetOtp).digest("hex");
+
+        user.resetOtp = hashedOtp;
+        user.resetOtpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+        user.otpVerified = false;
+
+        await user.save();
+
+        console.log(`Resent OTP for ${user.phoneNumber}: ${newResetOtp}`);
+
+        res.status(200).json({
+            success: true,
+            message: "OTP resent successfully",
+            // newResetOtp // Remove in production
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Error resending OTP", error: error.message });
     }
 };
 
@@ -452,7 +509,7 @@ export const resetPassword = async (req, res) => {
         }
 
         // SECURITY CHECK: Ensure OTP was actually verified
-       
+
         if (user.otpVerified !== true) {
             return res.status(400).json({
                 success: false,
