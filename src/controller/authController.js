@@ -99,64 +99,64 @@ export const verifyOtp = async (req, res) => {
 //resend otp controller
 export const resendOtp = async (req, res) => {
     try {
-      const { userId } = req.params;
-  
-      const user = await User.findById(userId);
-  
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found"
-        });
-      }
-  
-      // Already verified → no resend
-      if (user.isOtpVerified) {
-        return res.status(400).json({
-          success: false,
-          message: "OTP already verified"
-        });
-      }
-  
-      // Rate limit (60 sec)
-      if (
-        user.otpExpiresAt &&
-        user.otpExpiresAt > Date.now() - 60 * 1000
-      ) {
-        return res.status(429).json({
-          success: false,
-          message: "Please wait before requesting another OTP"
-        });
-      }
-  
-      // Generate OTP
-      const otp = "234567"; // static for testing
-  
-      // ✅ SAVE OTP PROPERLY
-      user.otp = otp;
-      user.otpExpiresAt = Date.now() + 5 * 60 * 1000;
-      user.isOtpVerified = false;
-  
-      await user.save();
-  
-      console.log("Resent OTP:", otp);
-  
-      res.status(200).json({
-        success: true,
-        message: "OTP resent successfully",
-        otp // remove in production
-      });
-  
-    } catch (error) {
-      console.error("RESEND OTP ERROR:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error"
-      });
-    }
-  };
+        const { userId } = req.params;
 
-  
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Already verified → no resend
+        if (user.isOtpVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP already verified"
+            });
+        }
+
+        // Rate limit (60 sec)
+        if (
+            user.otpExpiresAt &&
+            user.otpExpiresAt > Date.now() - 60 * 1000
+        ) {
+            return res.status(429).json({
+                success: false,
+                message: "Please wait before requesting another OTP"
+            });
+        }
+
+        // Generate OTP
+        const otp = "234567"; // static for testing
+
+        // ✅ SAVE OTP PROPERLY
+        user.otp = otp;
+        user.otpExpiresAt = Date.now() + 5 * 60 * 1000;
+        user.isOtpVerified = false;
+
+        await user.save();
+
+        console.log("Resent OTP:", otp);
+
+        res.status(200).json({
+            success: true,
+            message: "OTP resent successfully",
+            otp // remove in production
+        });
+
+    } catch (error) {
+        console.error("RESEND OTP ERROR:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
+
+
 export const createCredentials = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -353,30 +353,30 @@ export const updateProfile = async (req, res) => {
 export const sendResetOtp = async (req, res) => {
     try {
         const { phoneNumber } = req.body;
-        const user = await User.findOne({ phoneNumber });
 
+        const user = await User.findOne({ phoneNumber });
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        // Generate OTP (Random for production)
-        const newResetOtp="654321";
-        // const newResetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate OTP
+        const newResetOtp = "654321"; // Use Random in production
 
-        // Hash OTP before saving
+        // Hash OTP
         const hashedOtp = crypto.createHash("sha256").update(newResetOtp).digest("hex");
 
         user.resetOtp = hashedOtp;
         user.resetOtpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+        user.otpVerified = false; // Reset verification status just in case
+
         await user.save();
 
-        // TODO: Send OTP via SMS API here (Twilio, Fast2SMS etc.)
-        console.log(`OTP for ${phoneNumber}: ${newResetOtp}`); // For testing only
+        console.log(`OTP for ${phoneNumber}: ${newResetOtp}`);
 
         res.status(200).json({
             success: true,
             message: "Reset OTP sent successfully",
-            resetOtp: newResetOtp  // <-- Don't send this in production response!
+            // resetOtp: newResetOtp // Remove in production
         });
 
     } catch (error) {
@@ -398,61 +398,73 @@ export const verifyForgotOtp = async (req, res) => {
         });
 
         if (!user) {
-            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP"
+            });
         }
 
-        // Generate Random Token
-        const resetToken = crypto.randomBytes(20).toString('hex');
+        // --- Changes Start ---
 
-        // Hash Token
-        user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+        // Mark user as verified
+        user.otpVerified = true;
 
         // Clear OTP fields
         user.resetOtp = undefined;
         user.resetOtpExpire = undefined;
-        user.otpVerified = true;
 
         await user.save();
 
         res.json({
             success: true,
             message: "OTP verified successfully",
-            token: resetToken // Important: Frontend needs this for the next step
+            userId: user._id, // Send UserID to frontend
         });
 
     } catch (error) {
-        res.status(500).json({ success: false, message: "Error verifying OTP", error: error.message });
+        res.status(500).json({
+            success: false,
+            message: "Error verifying OTP",
+            error: error.message
+        });
     }
 };
+
+
 
 // 3. Reset Password
 export const resetPassword = async (req, res) => {
     try {
-        const { token, newPassword, confirmPassword } = req.body;
+        // Get userId from URL Params
+        const { userId } = req.params;
+        const { newPassword, confirmPassword } = req.body;
 
         if (newPassword !== confirmPassword) {
             return res.status(400).json({ success: false, message: "Passwords do not match" });
         }
 
-        // Hash the token received from frontend
-        const resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
+        // Find user by ID
+        const user = await User.findById(userId);
 
-        const user = await User.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: { $gt: Date.now() }
-        });
-
+        // Check if user exists
         if (!user) {
-            return res.status(400).json({ success: false, message: "Invalid or expired token" });
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // SECURITY CHECK: Ensure OTP was actually verified
+       
+        if (user.otpVerified !== true) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP verification required. Please verify OTP first."
+            });
         }
 
         // Update Password
-        user.password = await bcrypt.hash(newPassword, 10);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
 
-        // Clear Token fields
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpire = undefined;
+        // Reset the flag so it can't be used again
         user.otpVerified = false;
 
         await user.save();

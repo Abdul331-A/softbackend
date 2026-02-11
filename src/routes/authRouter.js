@@ -29,7 +29,7 @@ userRouter.post("/forgot-password/reset-otp", sendResetOtp);
 
 userRouter.post("/forgot-password/verify-forgot-otp", verifyForgotOtp);
 
-userRouter.post("/forgot-password/reset-password", resetPassword);
+userRouter.post("/forgot-password/reset-password/:userId", resetPassword);
 
 
 export default userRouter;
