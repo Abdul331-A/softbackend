@@ -247,14 +247,36 @@ export const createCredentials = async (req, res) => {
 
 
 export const getProfile = async (req, res) => {
-    const user = await User.findById(req.user._id)
-        .select("-password");
-    res.json({
-        success: true,
-        user
-    });
-};
+    try {
+        // 1. Fetch User
+        // .lean() converts the Mongoose Document to a plain JavaScript Object (Much Faster)
+        const user = await User.findById(req.user._id)
+            .select("-password -otp") // Exclude sensitive fields
+            .lean();
 
+        // 2. Safety Check (In case user was deleted recently)
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // 3. Send Response
+        res.status(200).json({
+            success: true,
+            user
+        });
+
+    } catch (error) {
+        console.error("Error in getProfile:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+};
 
 
 export const updateProfile = async (req, res) => {
@@ -270,102 +292,69 @@ export const updateProfile = async (req, res) => {
             username: newUsername
         } = req.body;
 
-
-        console.log("body latitude:", latitude);
-        console.log("body longitude:", longitude);
-
         const updateData = {};
 
+        // 1. Location Logic
         const latVal = parseFloat(latitude);
         const lngVal = parseFloat(longitude);
-
-        console.log("Calculated Lat:", latVal);
-        console.log("Calculated Lng:", lngVal);
-
 
         if (!isNaN(latVal) && !isNaN(lngVal)) {
             updateData.location = {
                 type: "Point",
-                // MongoDB requires [Longitude, Latitude] order
-                coordinates: [lngVal, latVal]
+                coordinates: [lngVal, latVal] // [Long, Lat]
             };
         }
 
-        //  Basic fields 
-        // if (location) updateData.location = location;
+        // 2. Basic fields
         if (bio) updateData.bio = bio;
 
-        //  Category 
-        if (mainCategory || subCategory) {
-            updateData.category = {};
-            if (mainCategory) updateData.category.mainCategory = mainCategory;
-            if (subCategory) updateData.category.subCategory = subCategory;
-        }
+        // 3. Category (Use Dot Notation to avoid overwriting)
+        if (mainCategory) updateData["category.mainCategory"] = mainCategory;
+        if (subCategory) updateData["category.subCategory"] = subCategory;
 
-        //  Username update 
+        // 4. Username Logic (FIXED)
         if (newUsername) {
             const normalizedUsername = newUsername.toLowerCase().trim();
 
-            // OPTIONAL validation
-            // const usernameRegex = /^[a-z0-9_.]{3,20}$/;
-            // if (!usernameRegex.test(normalizedUsername)) {
-            //     return res.status(400).json({
-            //         success: false,
-            //         message:
-            //             "Username must be 3–20 characters and contain only letters, numbers, underscores, or dots",
-            //     });
-            // }
-
-            // fetch current user
-
-            console.log("Final UpdateData being sent to DB:", JSON.stringify(updateData, null, 2));
-
-
             const currentUser = await User.findById(userId).select("username");
             if (!currentUser) {
-                return res.status(404).json({
-                    success: false,
-                    message: "User not found",
-                });
+                return res.status(404).json({ success: false, message: "User not found" });
             }
 
-            // same username → skip update
-            if (currentUser.username === normalizedUsername) {
-                res.status(200).json({
-                    success: true,
-                    message: "Username unchanged",
-                    user: currentUser,
+            // ONLY run checks if username is DIFFERENT
+            if (currentUser.username !== normalizedUsername) {
+                
+                // Check if taken by someone else
+                const usernameTaken = await User.findOne({
+                    username: normalizedUsername,
+                    _id: { $ne: userId },
                 });
+
+                if (usernameTaken) {
+                    return res.status(409).json({
+                        success: false,
+                        message: "Username already taken",
+                    });
+                }
+
+                // Add to updateData
+                updateData.username = normalizedUsername;
             }
-
-            // check uniqueness
-            const usernameTaken = await User.findOne({
-                username: normalizedUsername,
-                _id: { $ne: userId },
-            });
-
-            if (usernameTaken) {
-              return res.status(409).json({
-                    success: false,
-                    message: "Username already taken",
-                });
-            }
-
-            updateData.username = normalizedUsername;
+            // If username is SAME, we do NOTHING here. 
+            // We just let the code continue down to save location/bio.
         }
 
-        // ---------- Profile pic ----------
+        // 5. Profile Pic
         if (req.file) {
             updateData.profilePic = req.file.path;
         }
 
+        // 6. Final Save
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-password -followers -following -otp");
-
-        console.log("Final Update Data:", updateData);
 
         res.status(200).json({
             success: true,

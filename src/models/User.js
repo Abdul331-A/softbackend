@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
             coordinates: {
                 type: [Number], // [Longitude, Latitude]
                 index: "2dsphere", // IMPORTANT for geo queries
-                default: undefined // prevents empty arrays
+                default: undefined
             },
         },
         bio: {
