@@ -230,7 +230,7 @@ export const deletePost = async (req, res) => {
             return res.status(404).json({ success: false, message: "Post not found" });
         }
 
-        if (post.user.toString() !== req.user.userId) {
+        if (post.user.toString() !== req.user._id.toString()) {
             return res.status(403).json({ success: false, message: "Unauthorized" });
         }
 
