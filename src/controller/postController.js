@@ -129,10 +129,24 @@ export const editPost = async (req, res) => {
 
         // ➕ ADD NEW MEDIA
         if (req.files && req.files.length > 0) {
-            const newMedia = req.files.map(file => ({
-                url: file.path,
-                type: file.mimetype.startsWith("video/") ? "video" : "image"
-            }));
+            const newMedia = await Promise.all(
+                req.files.map(async (file) => {
+
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        folder: "posts"
+                    });
+
+                    return {
+                        mediaUrl: result.secure_url,
+                        public_id: result.public_id,
+                        mediaType: file.mimetype.startsWith("video/")
+                            ? "video"
+                            : "image",
+                        thumbnailUrl: null
+                    };
+                })
+            );
+
             post.media.push(...newMedia);
         }
 

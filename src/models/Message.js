@@ -16,9 +16,9 @@ const MessageSchema = new mongoose.Schema({
         required: true
     },
     // type of messages
-    type: {
+    messageType: {
         type: String,
-        enum: ["text", "image", "video", "audio"],
+        enum: ["text", "image", "video", "audio", "location", "contact", "files"],
         default: "text"
     },
     // url for media
@@ -35,12 +35,17 @@ const MessageSchema = new mongoose.Schema({
         enum: ["sent", "delivered", "read"],
         default: "sent",
     },
+    seen: {
+        type: Boolean,
+        default: false
+    },
     isDeleted: {
         type: Boolean,
         default: false,
     },
 
 }, { timestamps: true });
+
 
 export const Message = mongoose.model("Message", MessageSchema);
 
