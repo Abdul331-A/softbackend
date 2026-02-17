@@ -13,7 +13,7 @@ userRouter.post("/verify-otp/:userId", verifyOtp);
 
 userRouter.post("/resend-verify-otp/:userId", resendOtp);
 
-userRouter.post("/create-credentials", protect, upload.fields([{ name: "profilePic", maxCount: 1 }]), createCredentials);
+userRouter.post("/create-credentials", protect, upload.single("profilePic"), createCredentials);
 
 userRouter.post('/login', login);
 

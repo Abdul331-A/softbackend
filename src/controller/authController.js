@@ -4,6 +4,7 @@ import generateToken from "../utils/generateToken.js";
 import fs from "fs";
 // import { generateOtp } from "../utils/generateOtp.js";
 import crypto from 'crypto'
+import cloudinary from "../lib/cloudinary.js";
 
 export const requestOtp = async (req, res) => {
     try {
@@ -213,8 +214,15 @@ export const createCredentials = async (req, res) => {
         // Default to empty string if no file uploaded
         if (req.file) {
             user.profilePic = req.file.path;
+            // const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+            //     resource_type: "image",
+            // });
+            // user.profilePic = uploadResult.secure_url;
+            // fs.unlinkSync(req.file.path); // Delete local temp file
         }
         // --- CLOUDINARY LOGIC END ---
+
+        console.log("Final User Object before saving:", JSON.stringify(user, null, 2));
 
         await user.save();
 
@@ -254,27 +262,47 @@ export const updateProfile = async (req, res) => {
         const userId = req.params.userId;
 
         const {
-            location,
+            longitude,
+            latitude,
             bio,
             mainCategory,
             subCategory,
             username: newUsername
         } = req.body;
 
+
+        console.log("body latitude:", latitude);
+        console.log("body longitude:", longitude);
+
         const updateData = {};
 
-        // ---------- Basic fields ----------
-        if (location) updateData.location = location;
+        const latVal = parseFloat(latitude);
+        const lngVal = parseFloat(longitude);
+
+        console.log("Calculated Lat:", latVal);
+        console.log("Calculated Lng:", lngVal);
+
+
+        if (!isNaN(latVal) && !isNaN(lngVal)) {
+            updateData.location = {
+                type: "Point",
+                // MongoDB requires [Longitude, Latitude] order
+                coordinates: [lngVal, latVal]
+            };
+        }
+
+        //  Basic fields 
+        // if (location) updateData.location = location;
         if (bio) updateData.bio = bio;
 
-        // ---------- Category ----------
+        //  Category 
         if (mainCategory || subCategory) {
             updateData.category = {};
             if (mainCategory) updateData.category.mainCategory = mainCategory;
             if (subCategory) updateData.category.subCategory = subCategory;
         }
 
-        // ---------- Username update ----------
+        //  Username update 
         if (newUsername) {
             const normalizedUsername = newUsername.toLowerCase().trim();
 
@@ -289,6 +317,10 @@ export const updateProfile = async (req, res) => {
             // }
 
             // fetch current user
+
+            console.log("Final UpdateData being sent to DB:", JSON.stringify(updateData, null, 2));
+
+
             const currentUser = await User.findById(userId).select("username");
             if (!currentUser) {
                 return res.status(404).json({
@@ -313,7 +345,7 @@ export const updateProfile = async (req, res) => {
             });
 
             if (usernameTaken) {
-                return res.status(409).json({
+              return res.status(409).json({
                     success: false,
                     message: "Username already taken",
                 });
@@ -332,6 +364,8 @@ export const updateProfile = async (req, res) => {
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-password -followers -following -otp");
+
+        console.log("Final Update Data:", updateData);
 
         res.status(200).json({
             success: true,
@@ -447,13 +481,13 @@ export const resendForgotOtp = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "OTP already verified. Please reset your password."
-                
-                
+
+
             });
         }
 
         // Fix 2: Better Rate Limiting Logic
-       
+
         const isCooldownActive = user.resetOtpExpire && (user.resetOtpExpire.getTime() > Date.now() + 9 * 60 * 1000);
 
         if (isCooldownActive) {
@@ -529,7 +563,7 @@ export const resetPassword = async (req, res) => {
 
         await user.save();
 
-        res.status(200).json({ success: true, message: "Password reset successfully" ,userId: user._id});
+        res.status(200).json({ success: true, message: "Password reset successfully", userId: user._id });
 
     } catch (error) {
         res.status(500).json({ success: false, message: "Error resetting password", error: error.message });

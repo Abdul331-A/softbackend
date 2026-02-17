@@ -17,8 +17,16 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
         location: {
-            type: String,
-            trim: true
+            type: {
+                type: String,
+                enum: ["Point"],
+                default: "Point",
+            },
+            coordinates: {
+                type: [Number], // [Longitude, Latitude]
+                index: "2dsphere", // IMPORTANT for geo queries
+                default: undefined // prevents empty arrays
+            },
         },
         bio: {
             type: String,
@@ -29,11 +37,13 @@ const userSchema = new mongoose.Schema(
         category: {
             mainCategory: {
                 type: String,
-                trim: true
+                trim: true,
+                // default: ""
             },
             subCategory: {
                 type: String,
-                trim: true
+                trim: true,
+                // default: ""
             }
         },
 
@@ -65,10 +75,10 @@ const userSchema = new mongoose.Schema(
         },
         otpVerified: {
             type: Boolean,
-            default: false 
+            default: false
         },
 
-    
+
         followers: [
             {
                 type: mongoose.Schema.Types.ObjectId,
@@ -86,5 +96,7 @@ const userSchema = new mongoose.Schema(
 
     { timestamps: true }
 );
+
+userSchema.index({ location: "2dsphere" });
 
 export default mongoose.model("User", userSchema);
