@@ -8,7 +8,8 @@ import { fileURLToPath } from 'url';
 import postRouter from './src/routes/postRouter.js';
 import multer from 'multer';
 // import { isIPv4 } from 'net';
-
+import initializeSocket from './src/socket/io.js';
+import http from 'http';
 
 
 // __dirname replacement in ES modules
@@ -21,6 +22,8 @@ await connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+initializeSocket(server);
 // const HOST = process.env.HOST || '192.168.220.5';
 
 
@@ -47,18 +50,18 @@ app.use('/api/auth', userRouter)
 app.use('/api/posts', postRouter)
 
 app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError || err.message) {
-        return res.status(400).json({
-            success: false,
-            message: err.message,
-        });
-    }
-
-    // fallback
-    res.status(500).json({
-        success: false,
-        message: "Internal Server Error",
+  if (err instanceof multer.MulterError || err.message) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
     });
+  }
+
+  // fallback
+  res.status(500).json({
+    success: false,
+    message: "Internal Server Error",
+  });
 });
 
 app.listen(PORT, () => {

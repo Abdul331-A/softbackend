@@ -104,36 +104,64 @@ export const getMyPosts = async (req, res) => {
 export const editPost = async (req, res) => {
     try {
         const { postId } = req.params;
-        let { caption, location, deleteMediaIndexes } = req.body;
+        let { caption, location, deleteMediaIds } = req.body;
 
+        // 🔎 Find Post
         const post = await Post.findById(postId);
         if (!post) {
-            return res.status(404).json({ success: false, message: "Post not found" });
+            return res.status(404).json({
+                success: false,
+                message: "Post not found"
+            });
         }
 
-        // 🔐 Owner check
+        // 🔐 Owner Check
         if (post.user.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ success: false, message: "Unauthorized" });
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized"
+            });
         }
 
-        // 🗑 DELETE MEDIA
-        if (typeof deleteMediaIndexes === "string") {
-            deleteMediaIndexes = JSON.parse(deleteMediaIndexes);
+        // =========================
+        // 🗑 DELETE MEDIA SECTION
+        // =========================
+
+        if (typeof deleteMediaIds === "string") {
+            deleteMediaIds = JSON.parse(deleteMediaIds);
         }
 
-        if (Array.isArray(deleteMediaIndexes) && deleteMediaIndexes.length > 0) {
-            post.media = post.media.filter(
-                (_, index) => !deleteMediaIndexes.includes(index)
+        if (Array.isArray(deleteMediaIds) && deleteMediaIds.length > 0) {
+
+            const mediaToDelete = post.media.filter(media =>
+                deleteMediaIds.includes(media._id.toString())
+            );
+
+            // Delete from Cloudinary
+            for (let media of mediaToDelete) {
+                if (media.public_id) {
+                    await cloudinary.uploader.destroy(media.public_id);
+                }
+            }
+
+            // Remove from DB
+            post.media = post.media.filter(media =>
+                !deleteMediaIds.includes(media._id.toString())
             );
         }
 
-        // ➕ ADD NEW MEDIA
+        // =========================
+        // ➕ ADD NEW MEDIA SECTION
+        // =========================
+
         if (req.files && req.files.length > 0) {
-            const newMedia = await Promise.all(
+
+            const uploadedMedia = await Promise.all(
                 req.files.map(async (file) => {
 
                     const result = await cloudinary.uploader.upload(file.path, {
-                        folder: "posts"
+                        folder: "posts",
+                        resource_type: "auto"
                     });
 
                     return {
@@ -147,24 +175,30 @@ export const editPost = async (req, res) => {
                 })
             );
 
-            post.media.push(...newMedia);
+            post.media.push(...uploadedMedia);
         }
 
+        // =========================
         // ✏️ UPDATE TEXT FIELDS
+        // =========================
+
         if (caption !== undefined) post.caption = caption;
         if (location !== undefined) post.location = location;
 
         await post.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Post updated successfully",
             post
         });
 
     } catch (error) {
-        console.log("EDIT POST ERROR:", error);
-        res.status(500).json({ success: false, message: "Server Error" });
+        console.error("EDIT POST ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error"
+        });
     }
 };
 
