@@ -10,6 +10,10 @@ const conversationSchema = new mongoose.Schema({
             required: true
         }
     ],
+    chatName: {
+        type: String,
+        trim: true
+    },
     latestMessage: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Message"
@@ -40,5 +44,7 @@ const conversationSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-export const Conversation = mongoose.model("Conversation", conversationSchema);
+ const Conversation = mongoose.model("Conversation", conversationSchema);
+
+ export default Conversation;
 

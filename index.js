@@ -10,7 +10,10 @@ import multer from 'multer';
 // import { isIPv4 } from 'net';
 import initializeSocket from './src/socket/io.js';
 import http from 'http';
-
+import { error } from 'console';
+import errorHandler from './src/middleware/errorHandler.js';
+import listEndpoints from "express-list-endpoints";
+import conversationRouter from './src/routes/converstaionRouter.js';
 
 // __dirname replacement in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -48,6 +51,12 @@ app.get("/", (req, res) => {
 
 app.use('/api/auth', userRouter)
 app.use('/api/posts', postRouter)
+app.use('/api/conversations', conversationRouter)
+
+app.use(errorHandler.notFound);
+
+console.log(listEndpoints(app));
+
 
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError || err.message) {
@@ -63,6 +72,7 @@ app.use((err, req, res, next) => {
     message: "Internal Server Error",
   });
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

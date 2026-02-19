@@ -1,5 +1,5 @@
 import express from "express";
-import { createCredentials, getProfile, login, logout, requestOtp, resendForgotOtp, resendOtp, resetPassword, sendResetOtp, updateProfile, verifyForgotOtp, verifyOtp } from "../controller/authController.js";
+import { allUsers, createCredentials, getProfile, login, logout, requestOtp, resendForgotOtp, resendOtp, resetPassword, sendResetOtp, updateProfile, verifyForgotOtp, verifyOtp } from "../controller/authController.js";
 import protect from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
@@ -34,6 +34,8 @@ userRouter.post("/resend-forgotverify-otp/:userId", resendForgotOtp);
 
 
 userRouter.post("/forgot-password/reset-password/:userId", resetPassword);
+
+userRouter.get("/", protect, allUsers);
 
 
 export default userRouter;

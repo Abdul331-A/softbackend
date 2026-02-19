@@ -5,6 +5,8 @@ import fs from "fs";
 // import { generateOtp } from "../utils/generateOtp.js";
 import crypto from 'crypto'
 import cloudinary from "../lib/cloudinary.js";
+import asyncHandler from "express-async-handler";
+
 
 export const requestOtp = async (req, res) => {
     try {
@@ -323,7 +325,7 @@ export const updateProfile = async (req, res) => {
 
             // ONLY run checks if username is DIFFERENT
             if (currentUser.username !== normalizedUsername) {
-                
+
                 // Check if taken by someone else
                 const usernameTaken = await User.findOne({
                     username: normalizedUsername,
@@ -605,3 +607,20 @@ export const logout = async (req, res) => {
         message: "Logout successful."
     });
 };
+
+export const allUsers = asyncHandler(async (req, res) => {
+    const keyword = req.query.search
+        ? {
+            $or: [
+                { username: { $regex: req.query.search, $options: "i" } },
+                { phoneNumber: { $regex: req.query.search, $options: "i" } }
+            ]
+        }
+        : {};
+    const users = await User.find(keyword).find({ _id: { $ne: req.user._id } }).select("-password -otp -resetOtp -resetOtpExpire -__v -updatedAt -createdAt -otpVerified");
+    res.send(users);
+
+    
+    // console.log("Search:", req.query.search);
+    // console.log("Logged User:", req.user._id);
+});
